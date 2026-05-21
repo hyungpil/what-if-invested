@@ -86,15 +86,14 @@ export default function App() {
     try {
       const results = {}
 
-      const exchangeRates = await fetchExchangeRate(startDate, endDate)
+      // 1) 환율 데이터 먼저 가져오기 (Netlify Function)
+      const res = await fetch(
+        `/.netlify/functions/exchangeRate?start=${startDate}&end=${endDate}`
+      )
 
-      const exchangeRateMap = {}
+      const exchangeRateMap = await res.json()
 
-      exchangeRates.forEach(r => {
-        const key = r.date.toISOString().slice(0, 7) // YYYY-MM
-        exchangeRateMap[key] = r.rate
-      })
-
+      // 2) 자산별 시뮬레이션
       for (const name of selected) {
         const symbol = PREDEFINED_TICKERS[name]
 
@@ -107,12 +106,12 @@ export default function App() {
         results[name] = calculatePortfolio(
           raw,
           monthlyInvestment,
-          symbol,
           exchangeRateMap
         )
       }
 
       setPortfolioData(results)
+
     } catch (err) {
       console.error(err)
       alert(err.message)
