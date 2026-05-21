@@ -60,3 +60,28 @@ export async function fetchYahooData(
     }))
     .filter(item => item.price != null)
 }
+
+export async function fetchExchangeRate(start, end) {
+  try {
+    const url = `/api/yahoo?symbol=KRW=X&start=${start}&end=${end}`;
+    const res = await fetch(url);
+    const json = await res.json();
+
+    const result = json.chart?.result?.[0];
+
+    if (!result) {
+      throw new Error("No exchange rate data");
+    }
+
+    const timestamps = result.timestamp;
+    const closes = result.indicators.quote[0].close;
+
+    return timestamps.map((t, i) => ({
+      date: new Date(t * 1000),
+      rate: closes[i]
+    }));
+  } catch (err) {
+    console.error("Exchange Rate Fetch Error:", err);
+    return [];
+  }
+}

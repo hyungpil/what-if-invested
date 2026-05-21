@@ -86,6 +86,15 @@ export default function App() {
     try {
       const results = {}
 
+      const exchangeRates = await fetchExchangeRate(startDate, endDate)
+
+      const exchangeRateMap = {}
+
+      exchangeRates.forEach(r => {
+        const key = r.date.toISOString().slice(0, 7) // YYYY-MM
+        exchangeRateMap[key] = r.rate
+      })
+
       for (const name of selected) {
         const symbol = PREDEFINED_TICKERS[name]
 
@@ -97,7 +106,9 @@ export default function App() {
 
         results[name] = calculatePortfolio(
           raw,
-          monthlyInvestment
+          monthlyInvestment,
+          symbol,
+          exchangeRateMap
         )
       }
 
@@ -211,7 +222,12 @@ export default function App() {
             </h1>
 
             <p className="text-slate-400">
-              Monthly DCA Investment Simulator
+              What if invested at that time
+            </p>
+
+            <p className="text-slate-500 text-sm mt-2 leading-relaxed">
+              • Monthly $100 investment on the last trading day of each month<br/>
+              • Korean stocks are converted to USD using the exchange rate at that time
             </p>
           </div>
 
