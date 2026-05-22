@@ -6,14 +6,13 @@ import { fetchYahooData } from './api'
 import { calculatePortfolio } from './calculator'
 import MetricCard from './components/MetricCard'
 
-import { Moon, Sun } from 'lucide-react'
+import { Moon } from 'lucide-react'
 
 export default function App() {
   const today = new Date().toISOString().slice(0, 10)
 
   const chartRef = useRef(null)
 
-  const [darkMode, setDarkMode] = useState(true)
   const [loading, setLoading] = useState(false)
 
   const [startDate, setStartDate] = useState('2025-01-01')
@@ -33,69 +32,44 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([])
   const [portfolioData, setPortfolioData] = useState({})
 
-  useEffect(() => {
-    const saved = localStorage.getItem('investment-settings')
-
-    if (saved) {
-      const parsed = JSON.parse(saved)
-      setSelected(parsed.selected || [])
-      setMonthlyInvestment(parsed.monthlyInvestment || 100)
-    }
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem(
-      'investment-settings',
-      JSON.stringify({ selected, monthlyInvestment })
-    )
-  }, [selected, monthlyInvestment])
-
+  // -----------------------------
+  // Yahoo search (Netlify function)
+  // -----------------------------
   async function searchYahoo(query) {
-    if (!query) {
-      setSearchResults([])
-      return
-    }
+    if (!query) return setSearchResults([])
 
     try {
       const res = await fetch(`/.netlify/functions/search?q=${query}`)
       const json = await res.json()
       setSearchResults(json.quotes?.slice(0, 10) || [])
-    } catch (err) {
-      console.error(err)
+    } catch (e) {
+      console.error(e)
     }
   }
 
+  // -----------------------------
+  // Simulation
+  // -----------------------------
   async function runSimulation() {
     setLoading(true)
 
     try {
       const results = {}
 
-      const res = await fetch(
-        `/.netlify/functions/exchangeRate?start=${startDate}&end=${endDate}`
-      )
-
-      const exchangeRateMap = await res.json()
-
       for (const name of selected) {
         const symbol = PREDEFINED_TICKERS[name]
-
-        const raw = await fetchYahooData(
-          symbol,
-          startDate,
-          endDate
-        )
+        const raw = await fetchYahooData(symbol, startDate, endDate)
 
         results[name] = calculatePortfolio(
           raw,
-          monthlyInvestment,
-          exchangeRateMap
+          monthlyInvestment
         )
       }
 
       setPortfolioData(results)
-    } catch (err) {
-      console.error(err)
+    } catch (e) {
+      console.error(e)
+      alert(e.message)
     }
 
     setLoading(false)
@@ -105,6 +79,9 @@ export default function App() {
     runSimulation()
   }, [])
 
+  // -----------------------------
+  // Chart data
+  // -----------------------------
   const chartData = useMemo(() => {
     return Object.entries(portfolioData).map(([name, data]) => ({
       x: data.map(d => d.date),
@@ -115,30 +92,30 @@ export default function App() {
     }))
   }, [portfolioData])
 
-  const filteredTickers = Object.keys(PREDEFINED_TICKERS).filter(t =>
-    t.toLowerCase().includes(searchText.toLowerCase())
-  )
-
+  // -----------------------------
+  // Metrics (FIX: ticker + font issue)
+  // -----------------------------
   const metrics = useMemo(() => {
-    return Object.entries(portfolioData)
-      .map(([name, data]) => {
-        if (!data.length) return null
+    return Object.entries(portfolioData).map(([name, data]) => {
+      if (!data?.length) return null
 
-        const final = data[data.length - 1]
+      const last = data[data.length - 1]
 
-        const returnPct =
-          ((final.value / final.invested) - 1) * 100
+      const returnPct =
+        ((last.value / last.invested) - 1) * 100
 
-        return {
-          name,
-          invested: final.invested,
-          value: final.value,
-          returnPct
-        }
-      })
-      .filter(Boolean)
+      return {
+        name,
+        value: last.value,
+        invested: last.invested,
+        returnPct
+      }
+    }).filter(Boolean)
   }, [portfolioData])
 
+  // -----------------------------
+  // Plotly render (dark only)
+  // -----------------------------
   useEffect(() => {
     if (!chartRef.current) return
 
@@ -147,23 +124,31 @@ export default function App() {
       chartData,
       {
         title: 'Portfolio Value Over Time',
-        paper_bgcolor: darkMode ? '#1e293b' : '#ffffff',
-        plot_bgcolor: darkMode ? '#1e293b' : '#ffffff',
-        font: { color: darkMode ? '#ffffff' : '#111827' },
+        paper_bgcolor: '#0f172a',
+        plot_bgcolor: '#0f172a',
 
         legend: {
           orientation: 'h',
           y: -0.2,
           x: 0.5,
-          xanchor: 'center'
+          xanchor: 'center',
+          font: { color: '#fff' }
         },
 
+        font: {
+          color: '#fff'
+        },
+
+        height: 600,
+
         xaxis: {
-          gridcolor: darkMode ? '#334155' : '#e5e7eb'
+          gridcolor: '#1f2937',
+          color: '#fff'
         },
 
         yaxis: {
-          gridcolor: darkMode ? '#334155' : '#e5e7eb'
+          gridcolor: '#1f2937',
+          color: '#fff'
         },
 
         margin: {
@@ -171,149 +156,143 @@ export default function App() {
           l: 50,
           r: 30,
           b: 100
-        },
-
-        height: 600
+        }
       },
       { responsive: true }
     )
-  }, [chartData, darkMode])
+  }, [chartData])
 
+  // -----------------------------
+  // UI
+  // -----------------------------
   return (
-    <div className={darkMode ? 'bg-slate-900 text-white min-h-screen' : 'bg-white text-slate-900 min-h-screen'}>
-
+    <div className="bg-slate-950 text-white min-h-screen">
       <div className="max-w-7xl mx-auto p-6">
 
         {/* HEADER */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-start mb-8">
 
           <div>
             <h1 className="text-4xl font-bold mb-2">
               💰 Investment Tracker
             </h1>
 
-            <p className="text-slate-400">
-              What if invested at that time
+            {/* 복원된 설명 */}
+            <p className="text-slate-400 text-sm">
+              What if you invested $100 monthly on the last trading day?
+            </p>
+            <p className="text-slate-500 text-xs mt-2">
+              Korean stocks are converted using FX rate at each investment date.
             </p>
           </div>
 
           <button
-            onClick={() => setDarkMode(!darkMode)}
             className="p-3 rounded-xl bg-slate-800"
           >
-            {darkMode ? <Sun /> : <Moon />}
+            <Moon />
           </button>
 
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-          {/* LEFT */}
-          <div className={`rounded-2xl p-6 border ${
-            darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-          }`}>
+          {/* LEFT PANEL */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
 
-            <div className="text-xl font-semibold mb-6">
+            <div className="text-lg font-semibold mb-4">
               Configuration
             </div>
 
             <div className="space-y-4">
 
+              {/* DATE */}
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full p-3 border rounded-lg"
+                className="w-full bg-slate-800 p-2 rounded"
               />
 
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full p-3 border rounded-lg"
+                className="w-full bg-slate-800 p-2 rounded"
               />
 
+              {/* AMOUNT */}
               <input
                 type="number"
                 value={monthlyInvestment}
                 onChange={(e) =>
                   setMonthlyInvestment(Number(e.target.value))
                 }
-                className="w-full p-3 border rounded-lg"
+                className="w-full bg-slate-800 p-2 rounded"
               />
 
+              {/* SEARCH */}
               <input
-                type="text"
                 placeholder="Search assets..."
                 value={searchText}
                 onChange={(e) => {
                   setSearchText(e.target.value)
                   searchYahoo(e.target.value)
                 }}
-                className="w-full p-3 border rounded-lg"
+                className="w-full bg-slate-800 p-2 rounded"
               />
 
               {/* SEARCH RESULTS */}
               {searchResults.length > 0 && (
-                <div className="border rounded-lg max-h-48 overflow-auto">
-                  {searchResults.map(item => {
-                    const label = item.shortname || item.symbol
+                <div className="bg-slate-800 rounded p-2 max-h-40 overflow-auto">
+                  {searchResults.map((item) => (
+                    <button
+                      key={item.symbol}
+                      className="block w-full text-left p-2 hover:bg-slate-700"
+                      onClick={() => {
+                        const label = item.shortname || item.symbol
 
-                    return (
-                      <button
-                        key={item.symbol}
-                        className="w-full text-left p-2 hover:bg-slate-700"
-                        onClick={() => {
-                          if (!PREDEFINED_TICKERS[label]) {
-                            PREDEFINED_TICKERS[label] = item.symbol
-                          }
+                        if (!selected.includes(label)) {
+                          setSelected([...selected, label])
+                        }
 
-                          if (!selected.includes(label)) {
-                            setSelected([...selected, label])
-                          }
-
-                          setSearchText('')
-                          setSearchResults([])
-                        }}
-                      >
-                        {label} ({item.symbol})
-                      </button>
-                    )
-                  })}
+                        setSearchResults([])
+                        setSearchText('')
+                      }}
+                    >
+                      <div className="text-sm font-medium">
+                        {item.shortname || item.symbol}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {item.symbol}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
 
-              {/* ✅ TICKER LIST (복구 핵심) */}
-              <div className="mt-4 max-h-64 overflow-auto space-y-2">
-
-                {filteredTickers.map(ticker => {
-                  const checked = selected.includes(ticker)
-
-                  return (
-                    <label key={ticker} className="flex items-center gap-2">
-
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => {
-                          if (checked) {
-                            setSelected(selected.filter(x => x !== ticker))
-                          } else {
-                            setSelected([...selected, ticker])
-                          }
-                        }}
-                      />
-
-                      <span>{ticker}</span>
-
-                    </label>
-                  )
-                })}
+              {/* TICKERS (복구 핵심) */}
+              <div className="mt-4 space-y-2">
+                {Object.keys(PREDEFINED_TICKERS).map((t) => (
+                  <label key={t} className="flex gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(t)}
+                      onChange={() => {
+                        if (selected.includes(t)) {
+                          setSelected(selected.filter(x => x !== t))
+                        } else {
+                          setSelected([...selected, t])
+                        }
+                      }}
+                    />
+                    {t}
+                  </label>
+                ))}
               </div>
 
               <button
                 onClick={runSimulation}
-                className="w-full bg-blue-600 py-3 rounded-xl"
+                className="w-full bg-blue-600 p-2 rounded mt-4"
               >
                 {loading ? 'Loading...' : 'Run Simulation'}
               </button>
@@ -321,25 +300,29 @@ export default function App() {
             </div>
           </div>
 
-          {/* RIGHT */}
+          {/* RIGHT PANEL */}
           <div className="lg:col-span-3">
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-
-              {metrics.map(m => (
-                <MetricCard key={m.name} {...m} />
+            {/* METRICS (ticker 정상 표시) */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+              {metrics.map((m) => (
+                <MetricCard
+                  key={m.name}
+                  title={m.name}
+                  value={`$${m.value.toFixed(0)}`}
+                  change={`${m.returnPct.toFixed(2)}%`}
+                />
               ))}
-
             </div>
 
-            <div className="rounded-2xl p-4 border bg-slate-800">
+            {/* CHART */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
               <div ref={chartRef} />
             </div>
 
           </div>
 
         </div>
-
       </div>
     </div>
   )
