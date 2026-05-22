@@ -30,11 +30,12 @@ export default function App() {
   ])
 
   const [searchText, setSearchText] = useState('')
-  const [portfolioData, setPortfolioData] = useState([])
   const [searchResults, setSearchResults] = useState([])
+  const [portfolioData, setPortfolioData] = useState({})
 
   useEffect(() => {
     const saved = localStorage.getItem('investment-settings')
+
     if (saved) {
       const parsed = JSON.parse(saved)
       setSelected(parsed.selected || [])
@@ -56,8 +57,8 @@ export default function App() {
     }
 
     try {
-      const response = await fetch(`/.netlify/functions/search?q=${query}`)
-      const json = await response.json()
+      const res = await fetch(`/.netlify/functions/search?q=${query}`)
+      const json = await res.json()
       setSearchResults(json.quotes?.slice(0, 10) || [])
     } catch (err) {
       console.error(err)
@@ -95,7 +96,6 @@ export default function App() {
       setPortfolioData(results)
     } catch (err) {
       console.error(err)
-      alert(err.message)
     }
 
     setLoading(false)
@@ -115,6 +115,10 @@ export default function App() {
     }))
   }, [portfolioData])
 
+  const filteredTickers = Object.keys(PREDEFINED_TICKERS).filter(t =>
+    t.toLowerCase().includes(searchText.toLowerCase())
+  )
+
   const metrics = useMemo(() => {
     return Object.entries(portfolioData)
       .map(([name, data]) => {
@@ -122,9 +126,8 @@ export default function App() {
 
         const final = data[data.length - 1]
 
-        const returnPct = (
+        const returnPct =
           ((final.value / final.invested) - 1) * 100
-        ).toFixed(1)
 
         return {
           name,
@@ -146,28 +149,31 @@ export default function App() {
         title: 'Portfolio Value Over Time',
         paper_bgcolor: darkMode ? '#1e293b' : '#ffffff',
         plot_bgcolor: darkMode ? '#1e293b' : '#ffffff',
-        font: {
-          color: darkMode ? '#ffffff' : '#111827'
-        },
+        font: { color: darkMode ? '#ffffff' : '#111827' },
+
         legend: {
           orientation: 'h',
           y: -0.2,
           x: 0.5,
           xanchor: 'center'
         },
-        height: 600,
+
         xaxis: {
           gridcolor: darkMode ? '#334155' : '#e5e7eb'
         },
+
         yaxis: {
           gridcolor: darkMode ? '#334155' : '#e5e7eb'
         },
+
         margin: {
           t: 50,
           l: 50,
           r: 30,
           b: 100
-        }
+        },
+
+        height: 600
       },
       { responsive: true }
     )
@@ -189,11 +195,6 @@ export default function App() {
             <p className="text-slate-400">
               What if invested at that time
             </p>
-
-            <p className="text-slate-500 text-sm mt-2">
-              • Monthly $100 investment on last trading day<br/>
-              • KR stocks converted using FX rate
-            </p>
           </div>
 
           <button
@@ -207,7 +208,7 @@ export default function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-          {/* LEFT PANEL */}
+          {/* LEFT */}
           <div className={`rounded-2xl p-6 border ${
             darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
           }`}>
@@ -216,65 +217,103 @@ export default function App() {
               Configuration
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-4">
 
-              {/* START DATE */}
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className={`w-full p-3 border rounded-lg ${
-                  darkMode
-                    ? 'bg-slate-900 border-slate-600 text-white'
-                    : 'bg-white border-slate-300 text-black'
-                }`}
+                className="w-full p-3 border rounded-lg"
               />
 
-              {/* END DATE */}
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className={`w-full p-3 border rounded-lg ${
-                  darkMode
-                    ? 'bg-slate-900 border-slate-600 text-white'
-                    : 'bg-white border-slate-300 text-black'
-                }`}
+                className="w-full p-3 border rounded-lg"
               />
 
-              {/* INVESTMENT */}
               <input
                 type="number"
                 value={monthlyInvestment}
                 onChange={(e) =>
                   setMonthlyInvestment(Number(e.target.value))
                 }
-                className={`w-full p-3 border rounded-lg ${
-                  darkMode
-                    ? 'bg-slate-900 border-slate-600 text-white'
-                    : 'bg-white border-slate-300 text-black'
-                }`}
+                className="w-full p-3 border rounded-lg"
               />
 
-              {/* SEARCH */}
               <input
                 type="text"
-                placeholder="Search Yahoo Finance..."
+                placeholder="Search assets..."
                 value={searchText}
                 onChange={(e) => {
                   setSearchText(e.target.value)
                   searchYahoo(e.target.value)
                 }}
-                className={`w-full p-3 border rounded-lg ${
-                  darkMode
-                    ? 'bg-slate-900 border-slate-600 text-white'
-                    : 'bg-white border-slate-300 text-black'
-                }`}
+                className="w-full p-3 border rounded-lg"
               />
+
+              {/* SEARCH RESULTS */}
+              {searchResults.length > 0 && (
+                <div className="border rounded-lg max-h-48 overflow-auto">
+                  {searchResults.map(item => {
+                    const label = item.shortname || item.symbol
+
+                    return (
+                      <button
+                        key={item.symbol}
+                        className="w-full text-left p-2 hover:bg-slate-700"
+                        onClick={() => {
+                          if (!PREDEFINED_TICKERS[label]) {
+                            PREDEFINED_TICKERS[label] = item.symbol
+                          }
+
+                          if (!selected.includes(label)) {
+                            setSelected([...selected, label])
+                          }
+
+                          setSearchText('')
+                          setSearchResults([])
+                        }}
+                      >
+                        {label} ({item.symbol})
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* ✅ TICKER LIST (복구 핵심) */}
+              <div className="mt-4 max-h-64 overflow-auto space-y-2">
+
+                {filteredTickers.map(ticker => {
+                  const checked = selected.includes(ticker)
+
+                  return (
+                    <label key={ticker} className="flex items-center gap-2">
+
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          if (checked) {
+                            setSelected(selected.filter(x => x !== ticker))
+                          } else {
+                            setSelected([...selected, ticker])
+                          }
+                        }}
+                      />
+
+                      <span>{ticker}</span>
+
+                    </label>
+                  )
+                })}
+              </div>
 
               <button
                 onClick={runSimulation}
-                className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-semibold"
+                className="w-full bg-blue-600 py-3 rounded-xl"
               >
                 {loading ? 'Loading...' : 'Run Simulation'}
               </button>
@@ -285,23 +324,22 @@ export default function App() {
           {/* RIGHT */}
           <div className="lg:col-span-3">
 
-            {/* METRICS */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              {metrics.map((m) => (
-                <MetricCard key={m.name} {...m} darkMode={darkMode} />
+
+              {metrics.map(m => (
+                <MetricCard key={m.name} {...m} />
               ))}
+
             </div>
 
-            {/* CHART */}
-            <div className={`rounded-2xl p-4 border ${
-              darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-            }`}>
+            <div className="rounded-2xl p-4 border bg-slate-800">
               <div ref={chartRef} />
             </div>
 
           </div>
 
         </div>
+
       </div>
     </div>
   )
