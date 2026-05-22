@@ -161,7 +161,6 @@ export default function App() {
           </p>
 
           <p className="text-slate-500 text-sm mt-2">
-            • Monthly $100 investment on the last trading day of each month<br />
             • Korean stocks are converted to USD using the exchange rate at that time
           </p>
         </div>

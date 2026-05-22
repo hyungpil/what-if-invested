@@ -1,27 +1,25 @@
 export function calculatePortfolio(
   data,
-  monthlyInvestment,
+  initialInvestment,
   exchangeRateMap = {}
 ) {
   if (!data.length) return []
 
-  let sharesOwned = 0
-  let totalInvested = 0
+  const first = data[0]
+
+  const rateAtStart = exchangeRateMap[first.date] ?? 1
+  const entryPriceUsd = first.price / rateAtStart
+
+  const sharesOwned = initialInvestment / entryPriceUsd
 
   return data.map((item) => {
-
     const rate = exchangeRateMap[item.date] ?? 1
-    const priceInUsd = item.price / rate
-
-    const sharesBought = monthlyInvestment / priceInUsd
-
-    sharesOwned += sharesBought
-    totalInvested += monthlyInvestment
+    const priceUsd = item.price / rate
 
     return {
       date: item.date,
-      invested: totalInvested,
-      value: sharesOwned * priceInUsd
+      invested: initialInvestment,
+      value: sharesOwned * priceUsd
     }
   })
 }
