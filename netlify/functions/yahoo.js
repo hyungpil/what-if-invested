@@ -1,37 +1,67 @@
-const data = await response.json()
+export async function handler(event) {
+  try {
+    const { symbol, period1, period2 } = event.queryStringParameters
 
-const result = data?.chart?.result?.[0]
+    const url =
+      `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}` +
+      `?period1=${period1}&period2=${period2}&interval=1mo`
 
-if (!result || !result.timestamp || !result.indicators?.quote?.[0]) {
-  console.error("Yahoo empty result:", data)
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0'
+      }
+    })
 
-  return {
-    statusCode: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*'
-    },
-    body: JSON.stringify([])   // ❗ 502 방지 핵심
-  }
-}
+    const text = await response.text()
 
-const quote = result.indicators.quote[0]
-const timestamps = result.timestamp
+    let data
+    try {
+      data = JSON.parse(text)
+    } catch (e) {
+      console.error("Non-JSON response from Yahoo:", text)
+      return {
+        statusCode: 200,
+        body: JSON.stringify([])
+      }
+    }
 
-const formatted = timestamps
-  .map((t, i) => {
-    const close = quote.close?.[i]
+    const result = data?.chart?.result?.[0]
+    const quote = result?.indicators?.quote?.[0]
+    const timestamps = result?.timestamp
+
+    if (!result || !quote?.close || !timestamps) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify([])
+      }
+    }
+
+    const formatted = timestamps
+      .map((t, i) => {
+        const close = quote.close[i]
+        if (typeof close !== 'number') return null
+
+        return {
+          date: new Date(t * 1000).toISOString().slice(0, 10),
+          price: close
+        }
+      })
+      .filter(Boolean)
 
     return {
-      date: new Date(t * 1000).toISOString().slice(0, 10),
-      price: typeof close === 'number' ? close : null
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify(formatted)
     }
-  })
-  .filter(d => d.price !== null) // 🔥 핵심
 
-return {
-  statusCode: 200,
-  headers: {
-    'Access-Control-Allow-Origin': '*'
-  },
-  body: JSON.stringify(formatted)
+  } catch (err) {
+    console.error("Function crash:", err)
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify([])
+    }
+  }
 }
