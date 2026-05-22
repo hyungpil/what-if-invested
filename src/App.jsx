@@ -241,7 +241,13 @@ export default function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
 
-          <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
+          <div className={`
+            rounded-2xl p-6 border
+            ${darkMode
+              ? 'bg-slate-800 border-slate-700'
+              : 'bg-white border-slate-200'
+            }
+          `}>
 
             <div className="text-xl font-semibold mb-6">
               Configuration
@@ -258,7 +264,7 @@ export default function App() {
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3"
+                  className="w-full bg-slate-900 border border-slate-500 rounded-lg p-3 text-white"
                 />
               </div>
 
@@ -271,7 +277,7 @@ export default function App() {
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3"
+                  className="w-full bg-slate-900 border border-slate-500 rounded-lg p-3 text-white"
                 />
               </div>
 
@@ -413,6 +419,7 @@ export default function App() {
                   title={metric.name}
                   value={`$${metric.value.toFixed(0)}`}
                   change={`${metric.returnPct > 0 ? '+' : ''}${metric.returnPct}%`}
+                  darkMode={darkMode}   // 👈 추가
                 />
               ))}
 
