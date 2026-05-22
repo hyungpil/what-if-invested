@@ -4,12 +4,10 @@ export async function handler(event) {
 
     const url =
       `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}` +
-      `?period1=${period1}&period2=${period2}&interval=1mo`
+      `?period1=${period1}&period2=${period2}&interval=1d`
 
     const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0'
-      }
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     })
 
     const text = await response.text()
@@ -18,9 +16,10 @@ export async function handler(event) {
     try {
       data = JSON.parse(text)
     } catch (e) {
-      console.error("Non-JSON response from Yahoo:", text)
+      console.error("Yahoo JSON parse failed:", text)
       return {
         statusCode: 200,
+        headers: { 'Access-Control-Allow-Origin': '*' },
         body: JSON.stringify([])
       }
     }
@@ -29,38 +28,33 @@ export async function handler(event) {
     const quote = result?.indicators?.quote?.[0]
     const timestamps = result?.timestamp
 
-    if (!result || !quote?.close || !timestamps) {
+    if (!result || !quote || !timestamps) {
       return {
         statusCode: 200,
+        headers: { 'Access-Control-Allow-Origin': '*' },
         body: JSON.stringify([])
       }
     }
 
     const formatted = timestamps
-      .map((t, i) => {
-        const close = quote.close[i]
-        if (typeof close !== 'number') return null
-
-        return {
-          date: new Date(t * 1000).toISOString().slice(0, 10),
-          price: close
-        }
-      })
-      .filter(Boolean)
+      .map((t, i) => ({
+        date: new Date(t * 1000).toISOString().slice(0, 10),
+        price: quote.close?.[i]
+      }))
+      .filter(d => typeof d.price === "number")
 
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*'
-      },
+      headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify(formatted)
     }
 
   } catch (err) {
-    console.error("Function crash:", err)
+    console.error("FUNCTION ERROR:", err)
 
     return {
       statusCode: 200,
+      headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify([])
     }
   }
