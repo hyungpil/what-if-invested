@@ -133,8 +133,10 @@ export default function App() {
         font: { color: '#fff' },
         legend: {
           orientation: 'h',
-          y: -0.2,
-          x: 0.5
+          x: 0,
+          y: -0.25,
+          xanchor: 'left',
+          font: { size: 12, color: '#fff' }
         },
         xaxis: { gridcolor: '#1e293b' },
         yaxis: { gridcolor: '#1e293b' },
@@ -175,76 +177,127 @@ export default function App() {
 
             <div className="space-y-4">
 
-              <input type="date"
-                value={startDate}
-                onChange={e => setStartDate(e.target.value)}
-                className="w-full bg-slate-900 p-3 rounded-lg"
-              />
-
-              <input type="date"
-                value={endDate}
-                onChange={e => setEndDate(e.target.value)}
-                className="w-full bg-slate-900 p-3 rounded-lg"
-              />
-
-              <input type="number"
-                value={monthlyInvestment}
-                onChange={e => setMonthlyInvestment(Number(e.target.value))}
-                className="w-full bg-slate-900 p-3 rounded-lg"
-              />
-
-              <input
-                placeholder="Search assets..."
-                value={searchText}
-                onChange={e => {
-                  setSearchText(e.target.value)
-                  searchYahoo(e.target.value)
-                }}
-                className="w-full bg-slate-900 p-3 rounded-lg"
-              />
-
-              {searchResults.length > 0 && (
-                <div className="bg-slate-900 rounded-lg max-h-40 overflow-auto">
-                  {searchResults.map(item => (
-                    <button
-                      key={item.symbol}
-                      onClick={() => {
-                        const label = item.shortname || item.symbol
-                        if (!selected.includes(label)) {
-                          setSelected([...selected, label])
-                        }
-                      }}
-                      className="w-full text-left p-2 hover:bg-slate-700"
-                    >
-                      {item.symbol}
-                    </button>
-                  ))}
+              {/* START DATE */}
+              <div>
+                <div className="text-xs text-slate-400 mb-1">
+                  Start Date
                 </div>
-              )}
-
-              {/* SCROLL ONLY TICKER */}
-              <div className="max-h-64 overflow-y-auto space-y-2 mt-4">
-                {filteredTickers.map(t => (
-                  <label key={t} className="flex gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(t)}
-                      onChange={() => {
-                        setSelected(prev =>
-                          prev.includes(t)
-                            ? prev.filter(x => x !== t)
-                            : [...prev, t]
-                        )
-                      }}
-                    />
-                    {t}
-                  </label>
-                ))}
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  className="w-full bg-slate-900 p-3 rounded-lg text-white"
+                />
               </div>
 
+              {/* END DATE */}
+              <div>
+                <div className="text-xs text-slate-400 mb-1">
+                  End Date
+                </div>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  className="w-full bg-slate-900 p-3 rounded-lg text-white"
+                />
+              </div>
+
+              {/* MONTHLY INVESTMENT */}
+              <div>
+                <div className="text-xs text-slate-400 mb-1">
+                  Monthly Investment ($)
+                </div>
+                <input
+                  type="number"
+                  value={monthlyInvestment}
+                  onChange={e =>
+                    setMonthlyInvestment(Number(e.target.value))
+                  }
+                  className="w-full bg-slate-900 p-3 rounded-lg text-white"
+                />
+              </div>
+
+              {/* ASSETS SEARCH */}
+              <div>
+                <div className="text-xs text-slate-400 mb-1">
+                  Assets
+                </div>
+
+                <input
+                  placeholder="Search assets..."
+                  value={searchText}
+                  onChange={e => {
+                    setSearchText(e.target.value)
+                    searchYahoo(e.target.value)
+                  }}
+                  className="w-full bg-slate-900 p-3 rounded-lg text-white"
+                />
+
+                {searchResults.length > 0 && (
+                  <div className="bg-slate-900 rounded-lg max-h-40 overflow-auto mt-2 border border-slate-700">
+                    {searchResults.map(item => (
+                      <button
+                        key={item.symbol}
+                        onClick={() => {
+                          const label = item.shortname || item.symbol
+
+                          if (!selected.includes(label)) {
+                            setSelected([...selected, label])
+                          }
+
+                          setSearchText('')
+                          setSearchResults([])
+                        }}
+                        className="w-full text-left p-2 hover:bg-slate-700 text-sm"
+                      >
+                        <div className="text-white">{label}</div>
+                        <div className="text-xs text-slate-400">
+                          {item.symbol}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* TICKER LIST (FULL + SCROLL) */}
+              <div>
+                <div className="text-xs text-slate-400 mb-2">
+                  Assets List
+                </div>
+
+                <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
+                  {Object.keys(PREDEFINED_TICKERS).map(t => {
+                    const checked = selected.includes(t)
+
+                    return (
+                      <label
+                        key={t}
+                        className="flex gap-2 text-sm items-center"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setSelected(prev =>
+                              prev.includes(t)
+                                ? prev.filter(x => x !== t)
+                                : [...prev, t]
+                            )
+                          }}
+                        />
+                        <span className="text-slate-200">{t}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* RUN BUTTON */}
               <button
                 onClick={runSimulation}
-                className="w-full bg-blue-600 p-3 rounded-xl mt-4"
+                className="w-full bg-blue-600 p-3 rounded-xl mt-4 font-semibold"
               >
                 {loading ? 'Loading...' : 'Run Simulation'}
               </button>
