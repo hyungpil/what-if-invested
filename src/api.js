@@ -3,6 +3,7 @@ export async function fetchYahooData(
   startDate,
   endDate
 ) {
+
   const period1 = Math.floor(
     new Date(startDate).getTime() / 1000
   )
@@ -20,68 +21,99 @@ export async function fetchYahooData(
   const response = await fetch(url)
 
   if (!response.ok) {
-    throw new Error(`HTTP Error: ${response.status}`)
+    throw new Error(
+      `HTTP Error: ${response.status}`
+    )
   }
 
   const json = await response.json()
 
-  console.log(symbol, json)
+  console.log(
+    'FULL RESPONSE:',
+    JSON.stringify(json, null, 2)
+  )
 
-  // Yahoo error handling
+  // 🔥 핵심 수정
   if (
-    !json.chart ||
-    !json.chart.result ||
-    !json.chart.result.length
+    !json ||
+    !Array.isArray(json.data)
   ) {
-    console.error('Yahoo API Error:', json)
+    console.error(
+      'Invalid Yahoo response:',
+      json
+    )
 
-    return []
+    return {
+      currency: 'USD',
+      data: []
+    }
   }
 
-  const result = json.chart.result[0]
+  return {
+    currency:
+      json.currency || 'USD',
 
-  if (
-    !result.timestamp ||
-    !result.indicators ||
-    !result.indicators.adjclose
-  ) {
-    return []
+    data: json.data
   }
-
-  const timestamps = result.timestamp
-
-  const prices =
-    result.indicators.adjclose[0].adjclose
-
-  return timestamps
-    .map((t, i) => ({
-      date: new Date(t * 1000),
-      price: prices[i]
-    }))
-    .filter(item => item.price != null)
 }
 
-export async function fetchExchangeRate(start, end) {
+export async function fetchExchangeRate(
+  startDate,
+  endDate
+) {
+
   try {
-    const url = `/api/yahoo?symbol=KRW=X&start=${start}&end=${end}`;
-    const res = await fetch(url);
-    const json = await res.json();
 
-    const result = json.chart?.result?.[0];
+    const period1 = Math.floor(
+      new Date(startDate).getTime() / 1000
+    )
 
-    if (!result) {
-      throw new Error("No exchange rate data");
+    const period2 = Math.floor(
+      new Date(endDate).getTime() / 1000
+    )
+
+    const url =
+      `/.netlify/functions/yahoo` +
+      `?symbol=KRW=X` +
+      `&period1=${period1}` +
+      `&period2=${period2}`
+
+    const res = await fetch(url)
+
+    if (!res.ok) {
+      return {}
     }
 
-    const timestamps = result.timestamp;
-    const closes = result.indicators.quote[0].close;
+    const json = await res.json()
 
-    return timestamps.map((t, i) => ({
-      date: new Date(t * 1000),
-      rate: closes[i]
-    }));
+    // 🔥 여기 수정
+    if (
+      !json ||
+      !Array.isArray(json.data)
+    ) {
+      console.error(
+        'Invalid exchange rate response:',
+        json
+      )
+
+      return {}
+    }
+
+    const map = {}
+
+    json.data.forEach(item => {
+      map[item.date] = item.price
+    })
+
+    return map
+
   } catch (err) {
-    console.error("Exchange Rate Fetch Error:", err);
-    return [];
+
+    console.error(
+      'Exchange Rate Fetch Error:',
+      err
+    )
+
+    return {}
   }
 }

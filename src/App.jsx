@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Plotly from 'plotly.js-dist'
 
 import { PREDEFINED_TICKERS } from './tickers'
-import { fetchYahooData } from './api'
+import { fetchYahooData, fetchExchangeRate } from './api'
 import { calculatePortfolio } from './calculator'
 import MetricCard from './components/MetricCard'
 
@@ -66,10 +66,20 @@ export default function App() {
     setLoading(true)
 
     try {
+
+      // 🔥 환율 데이터 먼저 가져오기
+      const exchangeRateMap =
+        await fetchExchangeRate(
+          startDate,
+          endDate
+        )
+
       const results = {}
 
       for (const name of selected) {
-        const symbol = PREDEFINED_TICKERS[name]
+
+        const symbol =
+          PREDEFINED_TICKERS[name]
 
         const raw = await fetchYahooData(
           symbol,
@@ -77,33 +87,61 @@ export default function App() {
           endDate
         )
 
-        // 🔴 1. 기본 방어 (배열 아니면 skip)
-        if (!Array.isArray(raw)) {
-          console.error("Invalid Yahoo response:", symbol, raw)
+        // 🔥 새로운 구조
+        // { currency, data }
+        const currency =
+          raw?.currency || 'USD'
+
+        const priceData =
+          raw?.data || []
+
+        // 🔴 기본 방어
+        if (!Array.isArray(priceData)) {
+          console.error(
+            'Invalid Yahoo response:',
+            symbol,
+            raw
+          )
+
           continue
         }
 
-        // 🔴 2. 데이터 정제 (핵심)
-        const clean = raw.filter(d =>
-          d &&
-          typeof d.price === 'number' &&
-          !isNaN(d.price)
+        // 🔴 데이터 정제
+        const clean = priceData.filter(
+          d =>
+            d &&
+            typeof d.price === 'number' &&
+            !isNaN(d.price)
         )
 
         if (clean.length === 0) {
-          console.error("Empty price data:", symbol)
+          console.error(
+            'Empty price data:',
+            symbol
+          )
+
           continue
         }
 
-        // 🔴 3. 계산
-        const result = calculatePortfolio(
-          clean,
-          initialInvestment
-        )
+        // 🔥 currency 기반 자동 처리
+        const result =
+          calculatePortfolio(
+            clean,
+            initialInvestment,
+            exchangeRateMap,
+            currency
+          )
 
-        // 🔴 4. 결과 유효성 체크 (Plotly 방어)
-        if (!Array.isArray(result) || result.length === 0) {
-          console.error("Calculation failed:", symbol)
+        // 🔴 결과 방어
+        if (
+          !Array.isArray(result) ||
+          result.length === 0
+        ) {
+          console.error(
+            'Calculation failed:',
+            symbol
+          )
+
           continue
         }
 
@@ -113,7 +151,12 @@ export default function App() {
       setPortfolioData(results)
 
     } catch (e) {
-      console.error("Simulation error:", e)
+
+      console.error(
+        'Simulation error:',
+        e
+      )
+
     }
 
     setLoading(false)
@@ -194,7 +237,7 @@ export default function App() {
           </p>
 
           <p className="text-slate-500 text-sm mt-2">
-            • Korean stocks are converted to USD using the exchange rate at that time
+            • Korean stocks are converted to USD using daily exchange rates.
           </p>
         </div>
 
