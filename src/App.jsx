@@ -77,20 +77,43 @@ export default function App() {
           endDate
         )
 
+        // 🔴 1. 기본 방어 (배열 아니면 skip)
         if (!Array.isArray(raw)) {
-          console.error("Invalid Yahoo response:", raw)
+          console.error("Invalid Yahoo response:", symbol, raw)
           continue
         }
 
-        results[name] = calculatePortfolio(
-          raw,
+        // 🔴 2. 데이터 정제 (핵심)
+        const clean = raw.filter(d =>
+          d &&
+          typeof d.price === 'number' &&
+          !isNaN(d.price)
+        )
+
+        if (clean.length === 0) {
+          console.error("Empty price data:", symbol)
+          continue
+        }
+
+        // 🔴 3. 계산
+        const result = calculatePortfolio(
+          clean,
           initialInvestment
         )
+
+        // 🔴 4. 결과 유효성 체크 (Plotly 방어)
+        if (!Array.isArray(result) || result.length === 0) {
+          console.error("Calculation failed:", symbol)
+          continue
+        }
+
+        results[name] = result
       }
 
       setPortfolioData(results)
+
     } catch (e) {
-      console.error(e)
+      console.error("Simulation error:", e)
     }
 
     setLoading(false)
