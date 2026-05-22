@@ -6,14 +6,10 @@ import { fetchYahooData } from './api'
 import { calculatePortfolio } from './calculator'
 import MetricCard from './components/MetricCard'
 
-import { Moon, Sun } from 'lucide-react'
-
 export default function App() {
   const today = new Date().toISOString().slice(0, 10)
-
   const chartRef = useRef(null)
 
-  const [darkMode, setDarkMode] = useState(true)
   const [loading, setLoading] = useState(false)
 
   const [startDate, setStartDate] = useState('2025-01-01')
@@ -33,13 +29,8 @@ export default function App() {
   const [portfolioData, setPortfolioData] = useState([])
   const [searchResults, setSearchResults] = useState([])
 
-  // ticker slider (전체는 유지, UI만 제한)
-  const [tickerViewIndex, setTickerViewIndex] = useState(0)
-  const TICKER_PAGE_SIZE = 12
-
   useEffect(() => {
     const saved = localStorage.getItem('investment-settings')
-
     if (saved) {
       const parsed = JSON.parse(saved)
       setSelected(parsed.selected || [])
@@ -50,29 +41,19 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(
       'investment-settings',
-      JSON.stringify({
-        selected,
-        monthlyInvestment
-      })
+      JSON.stringify({ selected, monthlyInvestment })
     )
   }, [selected, monthlyInvestment])
 
   async function searchYahoo(query) {
-    if (!query) {
-      setSearchResults([])
-      return
-    }
+    if (!query) return setSearchResults([])
 
     try {
-      const response = await fetch(
-        `/.netlify/functions/search?q=${query}`
-      )
-
-      const json = await response.json()
-
+      const res = await fetch(`/.netlify/functions/search?q=${query}`)
+      const json = await res.json()
       setSearchResults(json.quotes?.slice(0, 10) || [])
-    } catch (err) {
-      console.error(err)
+    } catch (e) {
+      console.error(e)
     }
   }
 
@@ -98,9 +79,8 @@ export default function App() {
       }
 
       setPortfolioData(results)
-    } catch (err) {
-      console.error(err)
-      alert(err.message)
+    } catch (e) {
+      console.error(e)
     }
 
     setLoading(false)
@@ -111,30 +91,17 @@ export default function App() {
   }, [])
 
   const chartData = useMemo(() => {
-    const traces = []
-
-    Object.entries(portfolioData).forEach(([name, data]) => {
-      traces.push({
-        x: data.map(d => d.date),
-        y: data.map(d => d.value),
-        type: 'scatter',
-        mode: 'lines',
-        name
-      })
-    })
-
-    return traces
+    return Object.entries(portfolioData).map(([name, data]) => ({
+      x: data.map(d => d.date),
+      y: data.map(d => d.value),
+      type: 'scatter',
+      mode: 'lines',
+      name
+    }))
   }, [portfolioData])
 
-  const filteredTickers = Object.keys(PREDEFINED_TICKERS).filter(
-    (ticker) =>
-      ticker.toLowerCase().includes(searchText.toLowerCase())
-  )
-
-  // ticker paging (슬라이더 방식)
-  const visibleTickers = filteredTickers.slice(
-    tickerViewIndex,
-    tickerViewIndex + TICKER_PAGE_SIZE
+  const filteredTickers = Object.keys(PREDEFINED_TICKERS).filter(t =>
+    t.toLowerCase().includes(searchText.toLowerCase())
   )
 
   const metrics = useMemo(() => {
@@ -142,17 +109,13 @@ export default function App() {
       .map(([name, data]) => {
         if (!data.length) return null
 
-        const final = data[data.length - 1]
-
-        const returnPct = (
-          ((final.value / final.invested) - 1) * 100
-        ).toFixed(1)
+        const last = data[data.length - 1]
 
         return {
           name,
-          invested: final.invested,
-          value: final.value,
-          returnPct
+          invested: last.invested,
+          value: last.value,
+          returnPct: (((last.value / last.invested) - 1) * 100).toFixed(1)
         }
       })
       .filter(Boolean)
@@ -165,21 +128,17 @@ export default function App() {
       chartRef.current,
       chartData,
       {
-        title: 'Portfolio Value Over Time',
         paper_bgcolor: '#0f172a',
         plot_bgcolor: '#0f172a',
+        font: { color: '#fff' },
         legend: {
           orientation: 'h',
-          y: -0.25,
-          x: 0.5,
-          xanchor: 'center',
-          font: { color: '#fff' }
+          y: -0.2,
+          x: 0.5
         },
-        font: { color: '#fff' },
-        height: 600,
         xaxis: { gridcolor: '#1e293b' },
         yaxis: { gridcolor: '#1e293b' },
-        margin: { t: 50, l: 50, r: 30, b: 100 }
+        margin: { t: 30, l: 40, r: 20, b: 80 }
       },
       { responsive: true }
     )
@@ -189,214 +148,130 @@ export default function App() {
     <div className="bg-slate-900 text-white min-h-screen">
       <div className="max-w-7xl mx-auto p-6">
 
-        {/* HEADER (문구 원복) */}
-        <div className="flex justify-between items-center mb-8">
+        {/* HEADER */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">
+            💰 Investment Tracker
+          </h1>
 
-          <div>
-            <h1 className="text-4xl font-bold mb-2">
-              💰 Investment Tracker
-            </h1>
+          <p className="text-slate-400">
+            What if invested at that time
+          </p>
 
-            <p className="text-slate-400">
-              What if invested at that time
-            </p>
-
-            <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-              • Monthly $100 investment on the last trading day of each month<br/>
-              • Korean stocks are converted to USD using the exchange rate at that time
-            </p>
-          </div>
-
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-3 rounded-xl bg-slate-800"
-          >
-            {darkMode ? <Sun /> : <Moon />}
-          </button>
+          <p className="text-slate-500 text-sm mt-2">
+            • Monthly $100 investment on the last trading day of each month<br />
+            • Korean stocks are converted to USD using the exchange rate at that time
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-          {/* LEFT PANEL */}
-          <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
+          {/* LEFT */}
+          <div className="bg-slate-800 rounded-2xl p-6">
 
-            <div className="text-xl font-semibold mb-6">
+            <div className="text-lg font-semibold mb-4">
               Configuration
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-4">
 
-              {/* START DATE */}
-              <div>
-                <label className="block mb-2 text-sm text-slate-400">
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white"
-                />
-              </div>
+              <input type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="w-full bg-slate-900 p-3 rounded-lg"
+              />
 
-              {/* END DATE */}
-              <div>
-                <label className="block mb-2 text-sm text-slate-400">
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white"
-                />
-              </div>
+              <input type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className="w-full bg-slate-900 p-3 rounded-lg"
+              />
 
-              {/* INVESTMENT */}
-              <div>
-                <label className="block mb-2 text-sm text-slate-400">
-                  Monthly Investment ($)
-                </label>
-                <input
-                  type="number"
-                  value={monthlyInvestment}
-                  onChange={(e) =>
-                    setMonthlyInvestment(Number(e.target.value))
-                  }
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white"
-                />
-              </div>
+              <input type="number"
+                value={monthlyInvestment}
+                onChange={e => setMonthlyInvestment(Number(e.target.value))}
+                className="w-full bg-slate-900 p-3 rounded-lg"
+              />
 
-              {/* SEARCH */}
-              <div>
-                <label className="block mb-2 text-sm text-slate-400">
-                  Assets
-                </label>
+              <input
+                placeholder="Search assets..."
+                value={searchText}
+                onChange={e => {
+                  setSearchText(e.target.value)
+                  searchYahoo(e.target.value)
+                }}
+                className="w-full bg-slate-900 p-3 rounded-lg"
+              />
 
-                <input
-                  type="text"
-                  placeholder="Search Yahoo Finance..."
-                  value={searchText}
-                  onChange={(e) => {
-                    setSearchText(e.target.value)
-                    searchYahoo(e.target.value)
-                  }}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 mb-3 text-white"
-                />
+              {searchResults.length > 0 && (
+                <div className="bg-slate-900 rounded-lg max-h-40 overflow-auto">
+                  {searchResults.map(item => (
+                    <button
+                      key={item.symbol}
+                      onClick={() => {
+                        const label = item.shortname || item.symbol
+                        if (!selected.includes(label)) {
+                          setSelected([...selected, label])
+                        }
+                      }}
+                      className="w-full text-left p-2 hover:bg-slate-700"
+                    >
+                      {item.symbol}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-                {/* SEARCH RESULT */}
-                {searchResults.length > 0 && (
-                  <div className="mb-4 max-h-48 overflow-auto border border-slate-700 rounded-lg">
-                    {searchResults.map((item) => {
-                      const label = item.shortname || item.symbol
-
-                      return (
-                        <button
-                          key={item.symbol}
-                          onClick={() => {
-                            if (!selected.includes(label)) {
-                              setSelected([...selected, label])
-                            }
-                            setSearchText('')
-                            setSearchResults([])
-                          }}
-                          className="w-full text-left p-3 hover:bg-slate-700 border-b border-slate-800"
-                        >
-                          <div className="font-medium">{label}</div>
-                          <div className="text-xs text-slate-400">
-                            {item.symbol}
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-
-                {/* TICKER SLIDER VIEW */}
-                <div className="flex justify-between mb-2 text-xs text-slate-400">
-                  <button
-                    onClick={() =>
-                      setTickerViewIndex(Math.max(0, tickerViewIndex - TICKER_PAGE_SIZE))
-                    }
-                  >
-                    ◀
-                  </button>
-
-                  <span>
-                    {tickerViewIndex + 1} - {tickerViewIndex + TICKER_PAGE_SIZE}
-                  </span>
-
-                  <button
-                    onClick={() =>
-                      setTickerViewIndex(
-                        Math.min(
-                          filteredTickers.length - TICKER_PAGE_SIZE,
-                          tickerViewIndex + TICKER_PAGE_SIZE
+              {/* SCROLL ONLY TICKER */}
+              <div className="max-h-64 overflow-y-auto space-y-2 mt-4">
+                {filteredTickers.map(t => (
+                  <label key={t} className="flex gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(t)}
+                      onChange={() => {
+                        setSelected(prev =>
+                          prev.includes(t)
+                            ? prev.filter(x => x !== t)
+                            : [...prev, t]
                         )
-                      )
-                    }
-                  >
-                    ▶
-                  </button>
-                </div>
-
-                <div className="space-y-2 max-h-64 overflow-auto">
-                  {visibleTickers.map((ticker) => {
-                    const checked = selected.includes(ticker)
-
-                    return (
-                      <label
-                        key={ticker}
-                        className="flex items-center gap-3"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => {
-                            if (checked) {
-                              setSelected(selected.filter(x => x !== ticker))
-                            } else {
-                              setSelected([...selected, ticker])
-                            }
-                          }}
-                        />
-                        <span className="text-sm">{ticker}</span>
-                      </label>
-                    )
-                  })}
-                </div>
+                      }}
+                    />
+                    {t}
+                  </label>
+                ))}
               </div>
 
               <button
                 onClick={runSimulation}
-                className="w-full bg-blue-600 hover:bg-blue-700 transition rounded-xl py-3 font-semibold"
+                className="w-full bg-blue-600 p-3 rounded-xl mt-4"
               >
                 {loading ? 'Loading...' : 'Run Simulation'}
               </button>
+
             </div>
           </div>
 
-          {/* RIGHT PANEL */}
+          {/* RIGHT */}
           <div className="lg:col-span-3">
 
-            {/* METRICS */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-              {metrics.map((metric) => (
+              {metrics.map(m => (
                 <MetricCard
-                  key={metric.name}
-                  title={metric.name}
-                  value={`$${Number(metric.value).toLocaleString()}`}
-                  change={`${metric.returnPct > 0 ? '+' : ''}${metric.returnPct}%`}
+                  key={m.name}
+                  title={m.name}
+                  value={`$${Number(m.value).toLocaleString()}`}
+                  change={`${m.returnPct > 0 ? '+' : ''}${m.returnPct}%`}
                 />
               ))}
             </div>
 
-            {/* CHART */}
-            <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700">
-              <div ref={chartRef} className="w-full" />
+            <div className="bg-slate-800 rounded-2xl p-4">
+              <div ref={chartRef} />
             </div>
 
           </div>
+
         </div>
       </div>
     </div>
