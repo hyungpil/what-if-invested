@@ -10,7 +10,6 @@ import { Moon } from 'lucide-react'
 
 export default function App() {
   const today = new Date().toISOString().slice(0, 10)
-
   const chartRef = useRef(null)
 
   const [loading, setLoading] = useState(false)
@@ -32,9 +31,9 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([])
   const [portfolioData, setPortfolioData] = useState({})
 
-  // -----------------------------
-  // Yahoo search (Netlify function)
-  // -----------------------------
+  // -----------------------
+  // SEARCH
+  // -----------------------
   async function searchYahoo(query) {
     if (!query) return setSearchResults([])
 
@@ -47,9 +46,9 @@ export default function App() {
     }
   }
 
-  // -----------------------------
-  // Simulation
-  // -----------------------------
+  // -----------------------
+  // SIMULATION
+  // -----------------------
   async function runSimulation() {
     setLoading(true)
 
@@ -58,6 +57,7 @@ export default function App() {
 
       for (const name of selected) {
         const symbol = PREDEFINED_TICKERS[name]
+
         const raw = await fetchYahooData(symbol, startDate, endDate)
 
         results[name] = calculatePortfolio(
@@ -79,9 +79,9 @@ export default function App() {
     runSimulation()
   }, [])
 
-  // -----------------------------
-  // Chart data
-  // -----------------------------
+  // -----------------------
+  // CHART
+  // -----------------------
   const chartData = useMemo(() => {
     return Object.entries(portfolioData).map(([name, data]) => ({
       x: data.map(d => d.date),
@@ -92,30 +92,31 @@ export default function App() {
     }))
   }, [portfolioData])
 
-  // -----------------------------
-  // Metrics (FIX: ticker + font issue)
-  // -----------------------------
+  // -----------------------
+  // METRICS
+  // -----------------------
   const metrics = useMemo(() => {
-    return Object.entries(portfolioData).map(([name, data]) => {
-      if (!data?.length) return null
+    return Object.entries(portfolioData)
+      .map(([name, data]) => {
+        if (!data?.length) return null
 
-      const last = data[data.length - 1]
+        const last = data[data.length - 1]
 
-      const returnPct =
-        ((last.value / last.invested) - 1) * 100
+        const returnPct =
+          ((last.value / last.invested) - 1) * 100
 
-      return {
-        name,
-        value: last.value,
-        invested: last.invested,
-        returnPct
-      }
-    }).filter(Boolean)
+        return {
+          name,
+          value: last.value,
+          returnPct
+        }
+      })
+      .filter(Boolean)
   }, [portfolioData])
 
-  // -----------------------------
-  // Plotly render (dark only)
-  // -----------------------------
+  // -----------------------
+  // PLOTLY
+  // -----------------------
   useEffect(() => {
     if (!chartRef.current) return
 
@@ -123,7 +124,6 @@ export default function App() {
       chartRef.current,
       chartData,
       {
-        title: 'Portfolio Value Over Time',
         paper_bgcolor: '#0f172a',
         plot_bgcolor: '#0f172a',
 
@@ -135,60 +135,46 @@ export default function App() {
           font: { color: '#fff' }
         },
 
-        font: {
-          color: '#fff'
-        },
+        font: { color: '#fff' },
 
         height: 600,
 
-        xaxis: {
-          gridcolor: '#1f2937',
-          color: '#fff'
-        },
+        xaxis: { gridcolor: '#1f2937' },
+        yaxis: { gridcolor: '#1f2937' },
 
-        yaxis: {
-          gridcolor: '#1f2937',
-          color: '#fff'
-        },
-
-        margin: {
-          t: 50,
-          l: 50,
-          r: 30,
-          b: 100
-        }
+        margin: { t: 50, l: 50, r: 30, b: 100 }
       },
       { responsive: true }
     )
   }, [chartData])
 
-  // -----------------------------
+  // -----------------------
   // UI
-  // -----------------------------
+  // -----------------------
   return (
     <div className="bg-slate-950 text-white min-h-screen">
+
       <div className="max-w-7xl mx-auto p-6">
 
         {/* HEADER */}
-        <div className="flex justify-between items-start mb-8">
+        <div className="flex justify-between mb-8">
 
           <div>
             <h1 className="text-4xl font-bold mb-2">
               💰 Investment Tracker
             </h1>
 
-            {/* 복원된 설명 */}
-            <p className="text-slate-400 text-sm">
-              What if you invested $100 monthly on the last trading day?
+            <p className="text-slate-400">
+              What if invested at that time
             </p>
-            <p className="text-slate-500 text-xs mt-2">
-              Korean stocks are converted using FX rate at each investment date.
+
+            <p className="text-slate-500 text-sm mt-2">
+              • Monthly $100 investment on last trading day<br/>
+              • FX adjusted for Korean stocks
             </p>
           </div>
 
-          <button
-            className="p-3 rounded-xl bg-slate-800"
-          >
+          <button className="p-3 bg-slate-800 rounded-xl">
             <Moon />
           </button>
 
@@ -196,58 +182,63 @@ export default function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-          {/* LEFT PANEL */}
+          {/* LEFT */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-
-            <div className="text-lg font-semibold mb-4">
-              Configuration
-            </div>
 
             <div className="space-y-4">
 
-              {/* DATE */}
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full bg-slate-800 p-2 rounded"
-              />
+              {/* DATE INPUT (CUSTOM ICON OVERLAY) */}
+              <div className="relative">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full bg-slate-800 p-2 pr-10 rounded text-white"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white">
+                  📅
+                </div>
+              </div>
 
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full bg-slate-800 p-2 rounded"
-              />
+              <div className="relative">
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full bg-slate-800 p-2 pr-10 rounded text-white"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white">
+                  📅
+                </div>
+              </div>
 
-              {/* AMOUNT */}
+              {/* INVEST */}
               <input
                 type="number"
                 value={monthlyInvestment}
                 onChange={(e) =>
                   setMonthlyInvestment(Number(e.target.value))
                 }
-                className="w-full bg-slate-800 p-2 rounded"
+                className="w-full bg-slate-800 p-2 rounded text-white"
               />
 
               {/* SEARCH */}
               <input
-                placeholder="Search assets..."
                 value={searchText}
                 onChange={(e) => {
                   setSearchText(e.target.value)
                   searchYahoo(e.target.value)
                 }}
-                className="w-full bg-slate-800 p-2 rounded"
+                className="w-full bg-slate-800 p-2 rounded text-white"
+                placeholder="Search assets..."
               />
 
-              {/* SEARCH RESULTS */}
+              {/* RESULTS */}
               {searchResults.length > 0 && (
                 <div className="bg-slate-800 rounded p-2 max-h-40 overflow-auto">
-                  {searchResults.map((item) => (
+                  {searchResults.map(item => (
                     <button
                       key={item.symbol}
-                      className="block w-full text-left p-2 hover:bg-slate-700"
                       onClick={() => {
                         const label = item.shortname || item.symbol
 
@@ -258,41 +249,39 @@ export default function App() {
                         setSearchResults([])
                         setSearchText('')
                       }}
+                      className="block w-full text-left p-2 hover:bg-slate-700"
                     >
-                      <div className="text-sm font-medium">
-                        {item.shortname || item.symbol}
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        {item.symbol}
-                      </div>
+                      {item.shortname || item.symbol}
                     </button>
                   ))}
                 </div>
               )}
 
-              {/* TICKERS (복구 핵심) */}
-              <div className="mt-4 space-y-2">
-                {Object.keys(PREDEFINED_TICKERS).map((t) => (
-                  <label key={t} className="flex gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(t)}
-                      onChange={() => {
-                        if (selected.includes(t)) {
-                          setSelected(selected.filter(x => x !== t))
-                        } else {
-                          setSelected([...selected, t])
-                        }
-                      }}
-                    />
-                    {t}
-                  </label>
-                ))}
+              {/* TICKERS (LIMITED) */}
+              <div className="space-y-2 max-h-64 overflow-auto">
+                {Object.keys(PREDEFINED_TICKERS)
+                  .slice(0, 8)
+                  .map(t => (
+                    <label key={t} className="flex gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(t)}
+                        onChange={() => {
+                          setSelected(prev =>
+                            prev.includes(t)
+                              ? prev.filter(x => x !== t)
+                              : [...prev, t]
+                          )
+                        }}
+                      />
+                      {t}
+                    </label>
+                  ))}
               </div>
 
               <button
                 onClick={runSimulation}
-                className="w-full bg-blue-600 p-2 rounded mt-4"
+                className="w-full bg-blue-600 p-2 rounded"
               >
                 {loading ? 'Loading...' : 'Run Simulation'}
               </button>
@@ -300,16 +289,16 @@ export default function App() {
             </div>
           </div>
 
-          {/* RIGHT PANEL */}
+          {/* RIGHT */}
           <div className="lg:col-span-3">
 
-            {/* METRICS (ticker 정상 표시) */}
+            {/* METRICS */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-              {metrics.map((m) => (
+              {metrics.map(m => (
                 <MetricCard
                   key={m.name}
                   title={m.name}
-                  value={`$${m.value.toFixed(0)}`}
+                  value={`$${Math.round(m.value).toLocaleString()}`}
                   change={`${m.returnPct.toFixed(2)}%`}
                 />
               ))}

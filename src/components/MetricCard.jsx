@@ -1,31 +1,19 @@
-export default function MetricCard({ title, value, change, darkMode }) {
+export default function MetricCard({ title, value, change }) {
   return (
-    <div
-      className={`
-        rounded-2xl p-4 shadow-lg border
-        ${darkMode
-          ? 'bg-slate-800 border-slate-700'
-          : 'bg-white border-slate-200'
-        }
-      `}
-    >
-      <div className={`text-sm mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+      
+      <div className="text-slate-400 text-sm">
         {title}
       </div>
 
-      <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+      <div className="text-xl font-bold mt-1 text-white">
         {value}
       </div>
 
-      {change && (
-        <div className={`mt-2 text-sm ${
-          change.startsWith('+')
-            ? 'text-green-500'
-            : 'text-red-500'
-        }`}>
-          {change}
-        </div>
-      )}
+      <div className="text-xs mt-2 text-slate-400">
+        {change}
+      </div>
+
     </div>
   )
 }
