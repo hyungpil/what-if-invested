@@ -77,6 +77,11 @@ export default function App() {
           endDate
         )
 
+        if (!Array.isArray(raw)) {
+          console.error("Invalid Yahoo response:", raw)
+          continue
+        }
+
         results[name] = calculatePortfolio(
           raw,
           initialInvestment
