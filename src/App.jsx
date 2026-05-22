@@ -14,7 +14,9 @@ export default function App() {
 
   const [startDate, setStartDate] = useState('2025-01-01')
   const [endDate, setEndDate] = useState(today)
-  const [monthlyInvestment, setMonthlyInvestment] = useState(100)
+
+  // ✅ 변수명 정리 (의미 명확화)
+  const [initialInvestment, setInitialInvestment] = useState(100)
 
   const [selected, setSelected] = useState([
     'S&P 500',
@@ -34,16 +36,19 @@ export default function App() {
     if (saved) {
       const parsed = JSON.parse(saved)
       setSelected(parsed.selected || [])
-      setMonthlyInvestment(parsed.monthlyInvestment || 100)
+      setInitialInvestment(parsed.initialInvestment || 100)
     }
   }, [])
 
   useEffect(() => {
     localStorage.setItem(
       'investment-settings',
-      JSON.stringify({ selected, monthlyInvestment })
+      JSON.stringify({
+        selected,
+        initialInvestment
+      })
     )
-  }, [selected, monthlyInvestment])
+  }, [selected, initialInvestment])
 
   async function searchYahoo(query) {
     if (!query) return setSearchResults([])
@@ -74,7 +79,7 @@ export default function App() {
 
         results[name] = calculatePortfolio(
           raw,
-          monthlyInvestment
+          initialInvestment
         )
       }
 
@@ -185,7 +190,13 @@ export default function App() {
                   type="date"
                   value={startDate}
                   onChange={e => setStartDate(e.target.value)}
-                  className="w-full bg-slate-900 p-3 rounded-lg text-white"
+                  className="
+                    w-full p-3 rounded-lg
+                    bg-slate-700 text-white
+                    border border-slate-600
+                    shadow-inner
+                    focus:outline-none focus:ring-2 focus:ring-slate-400
+                  "
                 />
               </div>
 
@@ -198,26 +209,32 @@ export default function App() {
                   type="date"
                   value={endDate}
                   onChange={e => setEndDate(e.target.value)}
-                  className="w-full bg-slate-900 p-3 rounded-lg text-white"
+                  className="
+                    w-full p-3 rounded-lg
+                    bg-slate-700 text-white
+                    border border-slate-600
+                    shadow-inner
+                    focus:outline-none focus:ring-2 focus:ring-slate-400
+                  "
                 />
               </div>
 
-              {/* MONTHLY INVESTMENT */}
+              {/* INVESTMENT */}
               <div>
                 <div className="text-xs text-slate-400 mb-1">
-                  Monthly Investment ($)
+                  Initial Investment ($)
                 </div>
                 <input
                   type="number"
-                  value={monthlyInvestment}
+                  value={initialInvestment}
                   onChange={e =>
-                    setMonthlyInvestment(Number(e.target.value))
+                    setInitialInvestment(Number(e.target.value))
                   }
                   className="w-full bg-slate-900 p-3 rounded-lg text-white"
                 />
               </div>
 
-              {/* ASSETS SEARCH */}
+              {/* SEARCH */}
               <div>
                 <div className="text-xs text-slate-400 mb-1">
                   Assets
@@ -240,11 +257,9 @@ export default function App() {
                         key={item.symbol}
                         onClick={() => {
                           const label = item.shortname || item.symbol
-
                           if (!selected.includes(label)) {
                             setSelected([...selected, label])
                           }
-
                           setSearchText('')
                           setSearchResults([])
                         }}
@@ -260,7 +275,7 @@ export default function App() {
                 )}
               </div>
 
-              {/* TICKER LIST (FULL + SCROLL) */}
+              {/* TICKERS */}
               <div>
                 <div className="text-xs text-slate-400 mb-2">
                   Assets List
@@ -293,7 +308,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* RUN BUTTON */}
               <button
                 onClick={runSimulation}
                 className="w-full bg-blue-600 p-3 rounded-xl mt-4 font-semibold"
