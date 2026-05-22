@@ -30,17 +30,13 @@ export default function App() {
   ])
 
   const [searchText, setSearchText] = useState('')
-
   const [portfolioData, setPortfolioData] = useState([])
-
   const [searchResults, setSearchResults] = useState([])
 
   useEffect(() => {
     const saved = localStorage.getItem('investment-settings')
-
     if (saved) {
       const parsed = JSON.parse(saved)
-
       setSelected(parsed.selected || [])
       setMonthlyInvestment(parsed.monthlyInvestment || 100)
     }
@@ -49,32 +45,20 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(
       'investment-settings',
-      JSON.stringify({
-        selected,
-        monthlyInvestment
-      })
+      JSON.stringify({ selected, monthlyInvestment })
     )
   }, [selected, monthlyInvestment])
 
   async function searchYahoo(query) {
-
     if (!query) {
       setSearchResults([])
       return
     }
 
     try {
-
-      const response = await fetch(
-        `/.netlify/functions/search?q=${query}`
-      )
-
+      const response = await fetch(`/.netlify/functions/search?q=${query}`)
       const json = await response.json()
-
-      setSearchResults(
-        json.quotes?.slice(0, 10) || []
-      )
-
+      setSearchResults(json.quotes?.slice(0, 10) || [])
     } catch (err) {
       console.error(err)
     }
@@ -86,14 +70,12 @@ export default function App() {
     try {
       const results = {}
 
-      // 1) 환율 데이터 먼저 가져오기 (Netlify Function)
       const res = await fetch(
         `/.netlify/functions/exchangeRate?start=${startDate}&end=${endDate}`
       )
 
       const exchangeRateMap = await res.json()
 
-      // 2) 자산별 시뮬레이션
       for (const name of selected) {
         const symbol = PREDEFINED_TICKERS[name]
 
@@ -111,7 +93,6 @@ export default function App() {
       }
 
       setPortfolioData(results)
-
     } catch (err) {
       console.error(err)
       alert(err.message)
@@ -125,28 +106,14 @@ export default function App() {
   }, [])
 
   const chartData = useMemo(() => {
-    const traces = []
-
-    Object.entries(portfolioData).forEach(([name, data]) => {
-      traces.push({
-        x: data.map(d => d.date),
-        y: data.map(d => d.value),
-        type: 'scatter',
-        mode: 'lines',
-        name
-      })
-    })
-
-    return traces
+    return Object.entries(portfolioData).map(([name, data]) => ({
+      x: data.map(d => d.date),
+      y: data.map(d => d.value),
+      type: 'scatter',
+      mode: 'lines',
+      name
+    }))
   }, [portfolioData])
-
-  const filteredTickers = Object.keys(
-    PREDEFINED_TICKERS
-  ).filter((ticker) =>
-    ticker.toLowerCase().includes(
-      searchText.toLowerCase()
-    )
-  )
 
   const metrics = useMemo(() => {
     return Object.entries(portfolioData)
@@ -177,23 +144,23 @@ export default function App() {
       chartData,
       {
         title: 'Portfolio Value Over Time',
-        paper_bgcolor: '#1e293b',
-        plot_bgcolor: '#1e293b',
+        paper_bgcolor: darkMode ? '#1e293b' : '#ffffff',
+        plot_bgcolor: darkMode ? '#1e293b' : '#ffffff',
+        font: {
+          color: darkMode ? '#ffffff' : '#111827'
+        },
         legend: {
           orientation: 'h',
           y: -0.2,
           x: 0.5,
           xanchor: 'center'
         },
-        font: {
-          color: '#ffffff'
-        },
         height: 600,
         xaxis: {
-          gridcolor: '#334155'
+          gridcolor: darkMode ? '#334155' : '#e5e7eb'
         },
         yaxis: {
-          gridcolor: '#334155'
+          gridcolor: darkMode ? '#334155' : '#e5e7eb'
         },
         margin: {
           t: 50,
@@ -202,17 +169,16 @@ export default function App() {
           b: 100
         }
       },
-      {
-        responsive: true
-      }
+      { responsive: true }
     )
-  }, [chartData])
+  }, [chartData, darkMode])
 
   return (
-    <div className={`${darkMode ? 'bg-slate-900 text-white' : 'bg-white text-black'} min-h-screen`}>
+    <div className={darkMode ? 'bg-slate-900 text-white min-h-screen' : 'bg-white text-slate-900 min-h-screen'}>
 
       <div className="max-w-7xl mx-auto p-6">
 
+        {/* HEADER */}
         <div className="flex justify-between items-center mb-8">
 
           <div>
@@ -224,9 +190,9 @@ export default function App() {
               What if invested at that time
             </p>
 
-            <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-              • Monthly $100 investment on the last trading day of each month<br/>
-              • Korean stocks are converted to USD using the exchange rate at that time
+            <p className="text-slate-500 text-sm mt-2">
+              • Monthly $100 investment on last trading day<br/>
+              • KR stocks converted using FX rate
             </p>
           </div>
 
@@ -239,15 +205,12 @@ export default function App() {
 
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-          <div className={`
-            rounded-2xl p-6 border
-            ${darkMode
-              ? 'bg-slate-800 border-slate-700'
-              : 'bg-white border-slate-200'
-            }
-          `}>
+          {/* LEFT PANEL */}
+          <div className={`rounded-2xl p-6 border ${
+            darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+          }`}>
 
             <div className="text-xl font-semibold mb-6">
               Configuration
@@ -255,191 +218,91 @@ export default function App() {
 
             <div className="space-y-5">
 
-              <div>
-                <label className="block mb-2 text-sm text-slate-400">
-                  Start Date
-                </label>
+              {/* START DATE */}
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className={`w-full p-3 border rounded-lg ${
+                  darkMode
+                    ? 'bg-slate-900 border-slate-600 text-white'
+                    : 'bg-white border-slate-300 text-black'
+                }`}
+              />
 
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-500 rounded-lg p-3 text-white"
-                />
-              </div>
+              {/* END DATE */}
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className={`w-full p-3 border rounded-lg ${
+                  darkMode
+                    ? 'bg-slate-900 border-slate-600 text-white'
+                    : 'bg-white border-slate-300 text-black'
+                }`}
+              />
 
-              <div>
-                <label className="block mb-2 text-sm text-slate-400">
-                  End Date
-                </label>
+              {/* INVESTMENT */}
+              <input
+                type="number"
+                value={monthlyInvestment}
+                onChange={(e) =>
+                  setMonthlyInvestment(Number(e.target.value))
+                }
+                className={`w-full p-3 border rounded-lg ${
+                  darkMode
+                    ? 'bg-slate-900 border-slate-600 text-white'
+                    : 'bg-white border-slate-300 text-black'
+                }`}
+              />
 
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-500 rounded-lg p-3 text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 text-sm text-slate-400">
-                  Monthly Investment ($)
-                </label>
-
-                <input
-                  type="number"
-                  value={monthlyInvestment}
-                  onChange={(e) =>
-                    setMonthlyInvestment(Number(e.target.value))
-                  }
-                  className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 text-sm text-slate-400">
-                  Assets
-                </label>
-
-                <input
-                  type="text"
-                  placeholder="Search Yahoo Finance..."
-                  value={searchText}
-                  onChange={(e) => {
-
-                    setSearchText(e.target.value)
-
-                    searchYahoo(e.target.value)
-                  }}
-                  className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 mb-3"
-                />
-
-                {searchResults.length > 0 && (
-                  <div className="mb-4 max-h-48 overflow-auto border border-slate-700 rounded-lg">
-
-                    {searchResults.map((item) => {
-
-                      const label =
-                        item.shortname || item.symbol
-
-                      return (
-                        <button
-                          key={item.symbol}
-                          onClick={() => {
-
-                            if (!PREDEFINED_TICKERS[label]) {
-                              PREDEFINED_TICKERS[label] =
-                                item.symbol
-                            }
-
-                            if (!selected.includes(label)) {
-                              setSelected([
-                                ...selected,
-                                label
-                              ])
-                            }
-
-                            setSearchText('')
-                            setSearchResults([])
-                          }}
-                          className="w-full text-left p-3 hover:bg-slate-700 border-b border-slate-800"
-                        >
-
-                          <div className="font-medium">
-                            {label}
-                          </div>
-
-                          <div className="text-xs text-slate-400">
-                            {item.symbol}
-                          </div>
-
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-
-                <div className="space-y-2 max-h-72 overflow-auto">
-
-                  {filteredTickers.map((ticker) => {
-                    const checked = selected.includes(ticker)
-
-                    return (
-                      <label
-                        key={ticker}
-                        className="flex items-center gap-3"
-                      >
-
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => {
-                            if (checked) {
-                              setSelected(
-                                selected.filter(x => x !== ticker)
-                              )
-                            } else {
-                              setSelected([
-                                ...selected,
-                                ticker
-                              ])
-                            }
-                          }}
-                        />
-
-                        <span className="text-sm">
-                          {ticker}
-                        </span>
-
-                      </label>
-                    )
-                  })}
-
-                </div>
-              </div>
+              {/* SEARCH */}
+              <input
+                type="text"
+                placeholder="Search Yahoo Finance..."
+                value={searchText}
+                onChange={(e) => {
+                  setSearchText(e.target.value)
+                  searchYahoo(e.target.value)
+                }}
+                className={`w-full p-3 border rounded-lg ${
+                  darkMode
+                    ? 'bg-slate-900 border-slate-600 text-white'
+                    : 'bg-white border-slate-300 text-black'
+                }`}
+              />
 
               <button
                 onClick={runSimulation}
-                className="w-full bg-blue-600 hover:bg-blue-700 transition rounded-xl py-3 font-semibold"
+                className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-semibold"
               >
                 {loading ? 'Loading...' : 'Run Simulation'}
               </button>
 
             </div>
-
           </div>
 
+          {/* RIGHT */}
           <div className="lg:col-span-3">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-
-              {metrics.map((metric) => (
-                <MetricCard
-                  key={metric.name}
-                  title={metric.name}
-                  value={`$${metric.value.toFixed(0)}`}
-                  change={`${metric.returnPct > 0 ? '+' : ''}${metric.returnPct}%`}
-                  darkMode={darkMode}   // 👈 추가
-                />
+            {/* METRICS */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              {metrics.map((m) => (
+                <MetricCard key={m.name} {...m} darkMode={darkMode} />
               ))}
-
             </div>
 
-            <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700">
-
-              <div
-                ref={chartRef}
-                className="w-full"
-              />
-
+            {/* CHART */}
+            <div className={`rounded-2xl p-4 border ${
+              darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+            }`}>
+              <div ref={chartRef} />
             </div>
 
           </div>
 
         </div>
-
       </div>
-
     </div>
   )
 }
