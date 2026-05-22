@@ -2,11 +2,15 @@ const data = await response.json()
 
 const result = data?.chart?.result?.[0]
 
-// 🔴 여기 방어 추가
 if (!result || !result.timestamp || !result.indicators?.quote?.[0]) {
+  console.error("Yahoo empty result:", data)
+
   return {
     statusCode: 200,
-    body: JSON.stringify([])
+    headers: {
+      'Access-Control-Allow-Origin': '*'
+    },
+    body: JSON.stringify([])   // ❗ 502 방지 핵심
   }
 }
 
