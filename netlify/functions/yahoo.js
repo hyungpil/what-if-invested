@@ -14,19 +14,28 @@ export async function handler(event) {
 
     const data = await response.json()
 
+    const result = data?.chart?.result?.[0]
+    const quote = result?.indicators?.quote?.[0]
+
+    const timestamps = result?.timestamp || []
+
+    const formatted = timestamps.map((t, i) => ({
+      date: new Date(t * 1000).toISOString().slice(0, 10),
+      price: quote?.close?.[i]   // ✅ close만 사용
+    }))
+
     return {
       statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*'
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify(formatted)
     }
+
   } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: err.message
-      })
+      body: JSON.stringify({ error: err.message })
     }
   }
 }
